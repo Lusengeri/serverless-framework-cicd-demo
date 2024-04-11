@@ -5,6 +5,10 @@ on:
     branches:
       - master
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   deploy:
     name: deploy
@@ -14,13 +18,22 @@ jobs:
         node-version: [18.x]
     steps:
     - uses: actions/checkout@v3
+
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
+
     - name: Install Serverless Framework
       run: npm install -g serverless
-    - name: Configure credentials & deploy
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        audience: sts.amazonaws.com
+        aws-region: us-west-2
+        role-to-assume: arn:aws:iam::${{secrets.AWS_ACCOUNT_ID}}:role/gh_actions_role
+
+    - name: Deploy
       run: |
-        serverless config credentials --provider aws --key ${{ secrets.AWS_ACCESS_KEY_ID }} --secret ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        serverless deploy --aws-profile default --region us-east-1
+        serverless deploy
